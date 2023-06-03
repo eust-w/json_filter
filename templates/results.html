@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>生物数据库json过滤器</title>
+    <style>
+        /* 添加适当的 CSS 样式来美化页面 */
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <h1>生物数据库json过滤器</h1>
+
+    <br>
+
+    <h3>根据key过滤值</h3>
+    <form action="/filter_key_value" method="POST">
+        <input type="text" name="key" placeholder="Key">
+        <input type="text" name="value" placeholder="Value">
+        <input type="submit" value="Filter">
+    </form>
+
+    <br>
+
+    <h3>过滤值</h3>
+    <form action="/filter_value" method="POST">
+        <input type="text" name="value" placeholder="Value">
+        <input type="submit" value="Filter">
+    </form>
+
+    <br>
+
+    <h3>下载过滤数据</h3>
+    <a href="/download">Download</a>
+</body>
+</html>
