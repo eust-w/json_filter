@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"sync"
 )
 
 //go:embed templates/*.html
@@ -47,11 +48,8 @@ func (d *Data) FilterKeyValue(key, value string) bool {
 			}
 		}
 	}
-	if len(current) == 0 {
-		return false
-	}
 	d.currentResultSeq = current
-	return true
+	return len(current) > 0
 }
 
 func (d *Data) FilterValue(value string) bool {
@@ -60,14 +58,12 @@ func (d *Data) FilterValue(value string) bool {
 		for _, v := range data {
 			if containsString(v, value) {
 				current = append(current, data)
+				break
 			}
 		}
 	}
-	if len(current) == 0 {
-		return false
-	}
 	d.currentResultSeq = current
-	return true
+	return len(current) > 0
 }
 
 func containsString(data interface{}, target string) bool {
@@ -91,9 +87,11 @@ func containsString(data interface{}, target string) bool {
 	return false
 }
 
-func main() {
+func newRouter() *gin.Engine {
 	var GlobalData *Data
 	router := gin.Default()
+	var mu sync.Mutex
+	router.Use(func(c *gin.Context) { mu.Lock(); defer mu.Unlock(); c.Next() })
 	templates, err := template.ParseFS(templateFiles, "templates/*.html")
 	if err != nil {
 		log.Fatal("Failed to parse templates: ", err)
@@ -136,14 +134,16 @@ func main() {
 			return
 		}
 
-		GlobalData, err = NewData(jsonData)
+		var next *Data
+		next, err = NewData(jsonData)
 		if err != nil {
 			log.Error("Failed to create Data instance: ", err)
 			c.String(http.StatusBadRequest, "Failed to create Data instance")
 			return
 		}
 
-		//c.String(http.StatusOK, "JSON data uploaded successfully")
+		GlobalData = next
+		// Data is replaced only after successful parsing.
 		c.HTML(http.StatusOK, "results.html", gin.H{
 			"Data": GlobalData,
 		})
@@ -161,12 +161,12 @@ func main() {
 
 		filtered := GlobalData.FilterKeyValue(key, value)
 		if filtered {
-			c.String(http.StatusOK, "Filter applied successfully")
+
 			c.HTML(http.StatusOK, "results.html", gin.H{
 				"Data": GlobalData,
 			})
 		} else {
-			c.String(http.StatusOK, "No matching results.html found")
+
 			c.HTML(http.StatusOK, "results.html", gin.H{
 				"Data": GlobalData,
 			})
@@ -214,5 +214,11 @@ func main() {
 		c.Data(http.StatusOK, "application/json", fileData)
 	})
 
-	router.Run(":8080")
+	return router
+}
+
+func main() {
+	if err := newRouter().Run("127.0.0.1:8080"); err != nil {
+		log.Fatal(err)
+	}
 }
